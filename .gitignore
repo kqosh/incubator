@@ -1,0 +1,29 @@
+# Eclipse
+.project
+.classpath
+.settings/
+
+# IntelliJ
+.idea
+*.ipr
+*.iml
+*.iws
+
+# Java
+build/
+dist/
+release/
+
+# Gradle
+.gradle/
+build/
+
+# Unknown
+out/
+generated/
+
+# JEnv
+.java-version
+
+# OSX
+.DS_Store

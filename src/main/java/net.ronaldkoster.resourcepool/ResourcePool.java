@@ -26,9 +26,13 @@ public class ResourcePool implements Closeable {
             createResource();
         }
     }
-    
+
+    public int getSize() {
+        return size;
+    }
+
     private void createResource() {
-        var resource = factory.create();
+        var resource = factory.createResource(this);
         resources.add(resource);
         queue.offer(resource);
     }

@@ -2,5 +2,5 @@ package net.ronaldkoster.resourcepool;
 
 public interface PooledResourceFactory {
 
-    PooledResource create();
+    PooledResource createResource(ResourcePool pool);
 }

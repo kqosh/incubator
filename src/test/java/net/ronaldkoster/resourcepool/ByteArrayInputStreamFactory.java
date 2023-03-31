@@ -4,16 +4,14 @@ import java.io.ByteArrayInputStream;
 
 public class ByteArrayInputStreamFactory implements PooledResourceFactory {
     
-    private final ResourcePool pool;
-    private final int arraySize;
-
-    public ByteArrayInputStreamFactory(ResourcePool pool, int arraySize) {
-        this.pool = pool;
+    private final int arraySize; 
+    
+    public ByteArrayInputStreamFactory(int arraySize) {
         this.arraySize = arraySize;
     }
 
     @Override
-    public PooledResource create() {
+    public PooledResource createResource(ResourcePool pool) {
         return new PooledResource(pool, new ByteArrayInputStream(new byte[arraySize]));
     }
 }

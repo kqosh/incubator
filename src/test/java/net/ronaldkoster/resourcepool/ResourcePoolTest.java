@@ -12,4 +12,8 @@ public class ResourcePoolTest {
         Assertions.assertEquals(4, pool.getSize());
         //qqqq more
     }
+    
+    //qqqq test corrupted resource is dropped
+    
+    //qqqq test 5th will blocking await
 }

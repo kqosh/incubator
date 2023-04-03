@@ -13,6 +13,7 @@ public class ResourcePool implements Closeable {
     private final int size;
     private final BlockingQueue<PooledResource> queue;
     private final List<PooledResource> resources = new ArrayList<>();
+    private PooledResource resource;
 
     public ResourcePool(int size, PooledResourceFactory factory) {
         this.size = size;
@@ -37,7 +38,8 @@ public class ResourcePool implements Closeable {
         queue.offer(resource);
     }
     
-    public void returnResource(PooledResource resource) {
+    public void returnResource(PooledResource resource) throws IOException {
+        this.resource = resource;
         if (resource.isCorrupted()) {
             dropResource(resource);
             createResource();
@@ -46,13 +48,12 @@ public class ResourcePool implements Closeable {
         }
     }
     
-    private void dropResource(PooledResource resource) {
-        resources.remove(resource);
+    private void dropResource(PooledResource resource) throws IOException {
         try {
-            resource.close();
+            resources.remove(resource);
+            resource.getResource().close();
         } catch (Exception ex) {
-            System.out.println("Failed to close corrupted resource");
-            ex.printStackTrace();
+            throw new IOException("Failed to close corrupted resource", ex);
         }
     }
     
@@ -67,13 +68,8 @@ public class ResourcePool implements Closeable {
     @Override
     public void close() throws IOException {
         for (PooledResource resource : resources) {
-            getResource().getResource().close();
+            queue.remove(resource);
+            resource.getResource().close();
         }
-    }
-
-    private void closeResource() {
-        var resource = getResource();
-        resources.remove(resource);
-        resource.close();
     }
 }

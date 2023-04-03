@@ -1,6 +1,7 @@
 package net.ronaldkoster.resourcepool;
 
 import java.io.Closeable;
+import java.io.IOException;
 
 public class PooledResource implements Closeable {
     
@@ -22,7 +23,7 @@ public class PooledResource implements Closeable {
      * Returns this resource to the pool.
      */
     @Override
-    public void close() {
+    public void close() throws IOException {
         pool.returnResource(this);
     }
 

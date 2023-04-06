@@ -35,23 +35,24 @@ public class ResourcePoolTest {
         var jobDuration = 50;
 
         long t0, t1;
-        try (var resourcePool = new ResourcePool(resourcePoolSize, new ByteArrayInputStreamFactory(4))) {
-            var threadPool = Executors.newFixedThreadPool(threadPoolSize);
-            t0 = System.currentTimeMillis();
-            try {
+        var threadPool = Executors.newFixedThreadPool(threadPoolSize);
+        try {
+            try (var resourcePool = new ResourcePool(resourcePoolSize, new ByteArrayInputStreamFactory(4))) {
+                t0 = System.currentTimeMillis();
+                
                 // last job will have to wait for at least one job to have finished 
                 for (int i = 0; i < threadPoolSize; i++) {
                     threadPool.execute(new ResourceUser("job#" + i, latch, resourcePool, jobDuration));
                 }
-            } finally {
-                threadPool.shutdown();
+
+                boolean allFinished = latch.await(200, TimeUnit.MILLISECONDS);
+                t1 = System.currentTimeMillis();
+                Assertions.assertTrue(allFinished);
             }
-            
-            boolean allFinished = latch.await(200, TimeUnit.MILLISECONDS);
-            t1 = System.currentTimeMillis();
-            Assertions.assertTrue(allFinished);
+        } finally {
+            threadPool.shutdown();
         }
-        
+
         // 3 jobs ran parallel, 1 had to wait, so total duration should exceed 2 * jobDuration
         Assertions.assertTrue(t1 - t0 > 2L * jobDuration);
     }

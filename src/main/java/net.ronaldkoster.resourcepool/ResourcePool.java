@@ -6,14 +6,19 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.atomic.AtomicBoolean;
 
+/**
+ * A resource pool for {@link PooledResource} objects.
+ */
 public class ResourcePool implements Closeable {
     
     private final PooledResourceFactory factory;
     private final int size;
     private final BlockingQueue<PooledResource> queue;
     private final List<PooledResource> resources = new ArrayList<>();
-    private PooledResource resource;
+    
+    private final AtomicBoolean isClosing = new AtomicBoolean(false); 
 
     public ResourcePool(int size, PooledResourceFactory factory) {
         this.size = size;
@@ -37,9 +42,12 @@ public class ResourcePool implements Closeable {
         resources.add(resource);
         queue.offer(resource);
     }
-    
+
+    /**
+     * Return resource to the pool. Is invoked by {@link PooledResource#close()}}. 
+     * @throws IOException if the resource was marked as (@link PooledResource#isCorrupted() corrupted} and closing it fails.
+     */
     public void returnResource(PooledResource resource) throws IOException {
-        this.resource = resource;
         if (resource.isCorrupted()) {
             dropResource(resource);
             createResource();
@@ -56,8 +64,14 @@ public class ResourcePool implements Closeable {
             throw new IOException("Failed to close corrupted resource", ex);
         }
     }
-    
+
+    /**
+     * Get a resource, waiting if necessary until a resource becomes available. 
+     */
     public PooledResource getResource() {
+        if (isClosing.get()) {
+            throw new IllegalStateException("Pool is shutting down.");
+        }
         try {
             return queue.take();
         } catch (InterruptedException ex) {
@@ -65,8 +79,12 @@ public class ResourcePool implements Closeable {
         }
     }
 
+    /**
+     * Closes all resources and empties the pool. It does not wait resources to be returned.
+     */
     @Override
     public void close() throws IOException {
+        isClosing.set(true);
         for (PooledResource resource : resources) {
             queue.remove(resource);
             resource.getResource().close();

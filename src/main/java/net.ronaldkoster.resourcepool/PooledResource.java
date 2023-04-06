@@ -3,6 +3,9 @@ package net.ronaldkoster.resourcepool;
 import java.io.Closeable;
 import java.io.IOException;
 
+/**
+ * Decorator around {@link Closeable} that is part of a pool.
+ */
 public class PooledResource implements Closeable {
     
     private final ResourcePool pool;

@@ -4,11 +4,14 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 public class ResourcePoolTest {
     
     @Test
-    void corruptedResourceAreDrpoped() throws IOException {
+    void corruptedResourceAreDropped() throws IOException {
         var pool = new ResourcePool(3, new ByteArrayInputStreamFactory(4));
         Assertions.assertEquals(3, pool.getSize());
         for (int i = 0; i < 2; i++) {
@@ -24,5 +27,32 @@ public class ResourcePoolTest {
         pool.close();
     }
     
-    //qqqq test 4th will blocking await
+    @Test
+    void assertBlockingWait() throws InterruptedException, IOException {
+        var resourcePoolSize = 3;
+        var threadPoolSize = resourcePoolSize + 1;
+        var latch = new CountDownLatch(threadPoolSize);
+        var jobDuration = 50;
+
+        long t0, t1;
+        try (var resourcePool = new ResourcePool(resourcePoolSize, new ByteArrayInputStreamFactory(4))) {
+            var threadPool = Executors.newFixedThreadPool(threadPoolSize);
+            t0 = System.currentTimeMillis();
+            try {
+                // last job will have to wait for at least one job to have finished 
+                for (int i = 0; i < threadPoolSize; i++) {
+                    threadPool.execute(new ResourceUser("job#" + i, latch, resourcePool, jobDuration));
+                }
+            } finally {
+                threadPool.shutdown();
+            }
+            
+            boolean allFinished = latch.await(200, TimeUnit.MILLISECONDS);
+            t1 = System.currentTimeMillis();
+            Assertions.assertTrue(allFinished);
+        }
+        
+        // 3 jobs ran parallel, 1 had to wait, so total duration should exceed 2 * jobDuration
+        Assertions.assertTrue(t1 - t0 > 2L * jobDuration);
+    }
 }
